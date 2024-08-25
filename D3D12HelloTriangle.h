@@ -22,31 +22,29 @@ using namespace DirectX;
 // An example of this can be found in the class method: OnDestroy().
 using Microsoft::WRL::ComPtr;
 
-struct SceneConstantBuffer
-{
-    XMFLOAT4 offset;
-    float padding[60]; // Padding so the constant buffer is 256-byte aligned.
-};
-static_assert((sizeof(SceneConstantBuffer) % 256) == 0, "Constant Buffer size must be 256-byte aligned");
+class FrameResource;
 
-struct BasicVertexConstantData {
+
+struct SceneConstantBuffer {
     XMMATRIX model;// -> 16
     float padding[48];
 };
-static_assert((sizeof(BasicVertexConstantData) % 256) == 0, "BasicVertexConstantData size must be 256-byte aligned");
+static_assert((sizeof(SceneConstantBuffer) % 256) == 0, "BasicVertexConstantData size must be 256-byte aligned");
 
 class D3D12HelloTriangle : public DXSample
 {
 public:
     D3D12HelloTriangle(UINT width, UINT height, std::wstring name);
 
+    static D3D12HelloTriangle* Get() { return s_app; }
+
     virtual void OnInit();
     virtual void OnUpdate();
     virtual void OnRender();
     virtual void OnDestroy();
-
+    void BeginFrame();
+    void EndFrame();
 private:
-    static const UINT FrameCount = 2;
 
     struct Vertex
     {
@@ -60,8 +58,7 @@ private:
     ComPtr<IDXGISwapChain3> m_swapChain;
     ComPtr<ID3D12Device> m_device;
     ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
-    ComPtr<ID3D12CommandAllocator> m_commandAllocators[FrameCount];
-    ComPtr<ID3D12CommandAllocator> m_bundleAllocator;
+    ComPtr<ID3D12CommandAllocator> m_commandAllocator;
     ComPtr<ID3D12CommandQueue> m_commandQueue;
     ComPtr<ID3D12RootSignature> m_rootSignature;
     ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
@@ -69,7 +66,6 @@ private:
     ComPtr<ID3D12DescriptorHeap> m_cbvHeap;
     ComPtr<ID3D12PipelineState> m_pipelineState;
     ComPtr<ID3D12GraphicsCommandList> m_commandList;
-    ComPtr<ID3D12GraphicsCommandList> m_bundle;
     UINT m_rtvDescriptorSize;
 
     // App resources.
@@ -80,25 +76,42 @@ private:
 
     ComPtr<ID3D12Resource> m_texture;
 
-    ComPtr<ID3D12Resource> m_constantBuffer;
-    BasicVertexConstantData m_constantBufferData;
-    UINT8* m_pCbvDataBegin;
-
+    // Frame resources.
+    FrameResource* m_frameResources[FrameCount];
+    FrameResource* m_pCurrentFrameResource;
+    int m_currentFrameResourceIndex;
 
     // Synchronization objects.
     UINT m_frameIndex;
     HANDLE m_fenceEvent;
     ComPtr<ID3D12Fence> m_fence;
-    UINT64 m_fenceValues[FrameCount];
+    UINT64 m_fenceValues;
     UINT64 m_fenceValue = 0;
 
+    HANDLE m_workerBeginRenderFrame[NumContexts];
+    HANDLE m_workerFinishedRenderFrame[NumContexts];
+    HANDLE m_threadHandles[NumContexts];
+
+    // Singleton object so that worker threads can share members.
+    static D3D12HelloTriangle* s_app;
+    struct ThreadParameter
+    {
+        int threadIndex;
+    };
+    ThreadParameter m_threadParameters[NumContexts];
+private:
     void LoadPipeline();
     void LoadAssets();
-    void PopulateCommandList();
+    void LoadContexts();
+    //void PopulateCommandList();
     void WaitForGpu();
-    void MoveToNextFrame();
-    void WaitForPreviousFrame();
 
+    void RestoreD3DResources();
+    void ReleaseD3DResources();
+    void WorkerThread(int threadIndex);
+    void SetCommonPipelineState(ID3D12GraphicsCommandList* pCommandList);
+
+    // Support
     void ReadImage(const std::string filename, std::vector<uint8_t>& image,
         int& width, int& height);
 };
