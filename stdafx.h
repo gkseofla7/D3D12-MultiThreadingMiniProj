@@ -26,12 +26,17 @@
 #include <D3Dcompiler.h>
 #include <DirectXMath.h>
 #include "d3dx12.h"
+#include <pix.h>
 
 #include <string>
 #include <wrl.h>
 #include <shellapi.h>
 
-//#include <directxtk/SimpleMath.h>
-//
-//using DirectX::SimpleMath::Matrix;
-//using DirectX::SimpleMath::Vector3;
+static const UINT FrameCount = 3;
+static const UINT NumContexts = 3;
+
+// Command list submissions from main thread.
+static const int CommandListCount = 2;
+static const int CommandListPre = 0;
+static const int CommandListPost = 1;
+static const int ConstBufferNum = 100;

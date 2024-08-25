@@ -146,7 +146,7 @@ void D3D12HelloTriangle::LoadPipeline()
 
         // Describe and create a shader resource view (SRV) heap for the texture.
         D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-        srvHeapDesc.NumDescriptors = 1 + FrameCount; // srv + cbv
+        srvHeapDesc.NumDescriptors = 1 + ConstBufferNum*FrameCount; // srv + cbv
         srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
         srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
         ThrowIfFailed(m_device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvHeap)));
@@ -266,7 +266,7 @@ void D3D12HelloTriangle::LoadAssets()
             { { -0.05f, 0.05f, 0.0f }, { 0.0f, 0.0f} },// 좌측 상단 점
             { { 0.05f, -0.05f, 0.0f }, { 1.0f, 1.0f } },// 우측 하단 점
             { { -0.05f, -0.05f, 0.0f }, { 0.0f, 1.0f} },// 좌측 하단 점
-            { { 0.05f,   0.05f, 0.0f }, { 1.0f, 0.0f } }// 우측 상단 점
+            { { 0.05f,   0.05f, 0.0f }, { 1.0f, 0.0f } },// 우측 상단 점
         };
 
         const UINT vertexBufferSize = sizeof(triangleVertices);
@@ -403,7 +403,7 @@ void D3D12HelloTriangle::LoadAssets()
     for (int i = 0; i < FrameCount; i++)
     {
         m_frameResources[i] = new FrameResource(m_device.Get(), m_pipelineState.Get(), m_srvHeap.Get(), &m_viewport, i);
-        m_frameResources[i]->WriteConstantBuffers(XMMatrixIdentity());
+        //m_frameResources[i]->WriteConstantBuffers(XMMatrixIdentity());
     }
     m_currentFrameResourceIndex = 0;
     m_pCurrentFrameResource = m_frameResources[m_currentFrameResourceIndex];
@@ -506,7 +506,12 @@ void D3D12HelloTriangle::OnUpdate()
     }
 
     const float offsetAngle = 0.1f;
-    m_pCurrentFrameResource->WriteConstantBuffers(m_pCurrentFrameResource->mp_sceneConstantBufferWO->model * XMMatrixRotationZ(offsetAngle));
+    for (int i = 0; i < ConstBufferNum; i++)
+    {
+        m_pCurrentFrameResource->WriteConstantBuffers(XMMatrixRotationZ(offsetAngle), i);
+    }
+    
+    
 }
 
 // Render the scene.
@@ -652,12 +657,13 @@ void D3D12HelloTriangle::WorkerThread(int threadIndex)
 
         D3D12_GPU_DESCRIPTOR_HANDLE cbvSrvHeapStart = m_srvHeap->GetGPUDescriptorHandleForHeapStart();
         const UINT cbvSrvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-        for (int j = threadIndex; j < 10; j += NumContexts)
+        for (int j = threadIndex; j < ConstBufferNum; j += NumContexts)
         {
             // Set the diffuse and normal textures for the current object.
             // 여기서 텍스처 셋팅, 여러 다른 텍스처로 셋팅도 가능ㅎ
             //CD3DX12_GPU_DESCRIPTOR_HANDLE cbvSrvHandle(cbvSrvHeapStart, nullSrvCount + drawArgs.DiffuseTextureIndex, cbvSrvDescriptorSize);
             pSceneCommandList->SetGraphicsRootDescriptorTable(0, cbvSrvHeapStart);
+            m_pCurrentFrameResource->SetConstBuffer(pSceneCommandList, j % ConstBufferNum);
             pSceneCommandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
         }
 

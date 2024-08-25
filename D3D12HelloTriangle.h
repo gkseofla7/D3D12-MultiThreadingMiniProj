@@ -29,6 +29,11 @@ struct SceneConstantBuffer {
     XMMATRIX model;// -> 16
     float padding[48];
 };
+struct ModelConstatBuffer {
+    int index;
+    float paading[63];
+};
+
 static_assert((sizeof(SceneConstantBuffer) % 256) == 0, "BasicVertexConstantData size must be 256-byte aligned");
 
 class D3D12HelloTriangle : public DXSample

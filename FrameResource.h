@@ -14,7 +14,8 @@ public:
 
 	void Bind(ID3D12GraphicsCommandList* pCommandList, D3D12_CPU_DESCRIPTOR_HANDLE* pRtvHandle);
 	void Init();
-	void WriteConstantBuffers(XMMATRIX offset);
+	void WriteConstantBuffers(XMMATRIX offset, int index);
+	void SetConstBuffer(ID3D12GraphicsCommandList* pCommandList, int index);
 public:
 	ID3D12CommandList* m_batchSubmit[NumContexts + CommandListCount];
 
@@ -25,12 +26,12 @@ public:
 	ComPtr<ID3D12GraphicsCommandList> m_sceneCommandLists[NumContexts];
 
 	UINT64 m_fenceValue;
-	SceneConstantBuffer* mp_sceneConstantBufferWO;        // WRITE-ONLY pointer to the scene pass constant buffer.
+	SceneConstantBuffer* mp_sceneConstantBufferWO[ConstBufferNum];        // WRITE-ONLY pointer to the scene pass constant buffer.
 private:
 	ComPtr<ID3D12PipelineState> m_pipelineState;
-	ComPtr<ID3D12Resource> m_sceneConstantBuffer;
+	ComPtr<ID3D12Resource> m_sceneConstantBuffer[ConstBufferNum];
 	
-	D3D12_GPU_DESCRIPTOR_HANDLE m_sceneCbvHandle;
+	D3D12_GPU_DESCRIPTOR_HANDLE m_sceneCbvHandle[ConstBufferNum];
 
 };
 

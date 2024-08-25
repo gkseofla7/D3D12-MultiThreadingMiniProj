@@ -20,8 +20,7 @@ float4x4 CreateTranslationMatrix(float3 translation)
 }
 cbuffer SceneConstantBuffer : register(b0)
 {
-    matrix model; // -> 16
-    float4 padding[12];
+    matrix model[4]; // -> 16
 };
 
 struct PSInput
@@ -36,15 +35,8 @@ SamplerState g_sampler : register(s0);
 PSInput VSMain(float4 position : POSITION, float4 uv : TEXCOORD, uint instanceID : SV_InstanceID)
 {
     PSInput result;
-    result.position = mul(position, model);
-    int bIsNegative = 1;
-    if (instanceID%2 == 1)
-    {
-        bIsNegative = -1;
-
-    }
-    float4x4 Transition = CreateTranslationMatrix(float3(bIsNegative * (instanceID * 2345.0) % 1.0, bIsNegative * (instanceID * 2345.0) % 1.0, bIsNegative * (instanceID * 2345.0) % 1.0));
-    result.position = mul(result.position, Transition);
+    //result.position = position;
+    result.position = mul(position, model[instanceID]);
     result.uv = uv;
     return result;
 }
